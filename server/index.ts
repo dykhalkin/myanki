@@ -9,7 +9,8 @@ const __dirname = path.dirname(__filename);
 
 
 export const app = express();
-const port = 3000;
+const port = process.env.PORT || 3002;
+
 
 app.use(cors());
 app.use(express.json());
