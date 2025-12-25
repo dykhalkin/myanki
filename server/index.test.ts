@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 
-import { app } from './index';
-import { resetCards, INITIAL_CARDS } from './db';
+import { app } from './index.js';
+import { resetCards, INITIAL_CARDS } from './db.js';
+
 
 describe('Cards API', () => {
   beforeEach(() => {
