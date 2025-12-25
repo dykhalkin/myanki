@@ -1,0 +1,158 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    name: Test and Build
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run tests
+      run: npm test -- --run
+
+    - name: Build frontend
+      run: npm run build
+      env:
+        NODE_ENV: production
+
+    - name: Build backend
+      run: npm run build:server
+
+    - name: Create deployment package
+      run: |
+        # Create deployment directory
+        mkdir -p deployment
+        
+        # Copy necessary files
+        cp -r dist deployment/
+        cp -r dist-server deployment/
+        cp package*.json deployment/
+        
+        # Create tarball
+        tar -czf deployment.tar.gz deployment/
+
+    - name: Upload deployment artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-package
+        path: deployment.tar.gz
+        retention-days: 1
+
+  deploy:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    name: Deploy to Server
+    
+    steps:
+    - name: Download deployment artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: deployment-package
+
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.PORT || 22 }}
+        script: |
+          # Create application directory
+          sudo mkdir -p /opt/myanki
+          sudo chown -R $USER:$USER /opt/myanki
+          cd /opt/myanki
+          
+          # Backup current deployment
+          if [ -d "current" ]; then
+            # Clean up old backups first (keep only last 2 to save space)
+            ls -dt backup-* 2>/dev/null | tail -n +3 | xargs rm -rf || true
+            mv current backup-$(date +%Y%m%d-%H%M%S)
+          fi
+          
+          # Create new deployment directory
+          mkdir -p current
+
+    - name: Upload deployment package
+      uses: appleboy/scp-action@v0.1.5
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.PORT || 22 }}
+        source: "deployment.tar.gz"
+        target: "/tmp/"
+
+    - name: Extract and start application
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.PORT || 22 }}
+        script: |
+          # Extract deployment package
+          cd /opt/myanki/current
+          tar -xzf /tmp/deployment.tar.gz --strip-components=1
+          rm /tmp/deployment.tar.gz
+          
+          # Install production dependencies
+          npm ci --production
+          
+          # Install PM2 globally if not already installed
+          if ! command -v pm2 &> /dev/null; then
+            sudo npm install -g pm2
+          fi
+          
+          # Stop/Delete existing app (using || true to ignore errors if it doesn't exist)
+          pm2 delete myanki || true
+          
+          # Start application with PM2
+          pm2 start npm --name "myanki" -- start
+          pm2 save
+          
+          # Health check (wait a bit for startup)
+          sleep 10
+          if ! curl -f http://localhost:3000/api/cards; then
+            echo "Health check failed"
+            pm2 logs myanki --lines 50
+            exit 1
+          fi
+          
+          echo "Deployment completed successfully!"
+
+  notify:
+    needs: [test-and-build, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    name: Notify Deployment Status
+    
+    steps:
+    - name: Notify success
+      if: needs.deploy.result == 'success'
+      run: echo "✅ MyAnki Deployment successful!"
+    
+    - name: Notify failure
+      if: needs.deploy.result == 'failure' || needs.test-and-build.result == 'failure'
+      run: |
+        echo "❌ MyAnki Deployment failed!"
+        exit 1

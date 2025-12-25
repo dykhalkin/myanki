@@ -8,10 +8,12 @@
     "server": "tsx watch server/index.ts",
     "vite": "vite",
     "build": "tsc -b && vite build",
+    "build:server": "tsc -p tsconfig.server.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "NODE_ENV=production node dist-server/server/index.js"
   },
   "dependencies": {
     "concurrently": "^9.2.1",

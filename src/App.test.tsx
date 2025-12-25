@@ -82,7 +82,8 @@ test('correct card flipping according to template settings', async () => {
   // 2. Modify Template: Remove "Word" (f1) from front, add "Context" (f3) to front
   // There are two columns of checkboxes. We pick the "Front Side" section.
   const frontSideTitle = screen.getByText(/Front Side/i);
-  const frontSection = frontSideTitle.closest('div.space-y-3')!;
+  const frontSection = frontSideTitle.closest('div.space-y-3') as HTMLElement;
+
 
   const wordCheckbox = within(frontSection).getByText(/Word \(Target Lang\)/i);
   const contextCheckbox = within(frontSection).getByText(/Context \/ Example/i);

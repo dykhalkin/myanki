@@ -22,7 +22,9 @@ coverage
 
 # Production
 dist
+dist-server
 dist-ssr
+
 
 # Misc
 .DS_Store

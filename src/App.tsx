@@ -91,18 +91,16 @@ const TemplateEditor = ({ fields, template, onUpdateTemplate }) => {
             <div
               key={`front-${field.id}`}
               onClick={() => toggleField('front', field.id)}
-              className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                template.front.includes(field.id)
+              className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${template.front.includes(field.id)
                   ? 'bg-indigo-50 border border-indigo-200 text-indigo-900'
                   : 'bg-slate-50 border border-slate-100 text-slate-400 hover:bg-slate-100'
-              }`}
+                }`}
             >
               <div
-                className={`w-4 h-4 rounded border mr-3 flex items-center justify-center ${
-                  template.front.includes(field.id)
+                className={`w-4 h-4 rounded border mr-3 flex items-center justify-center ${template.front.includes(field.id)
                     ? 'bg-indigo-500 border-indigo-500'
                     : 'border-slate-300'
-                }`}
+                  }`}
               >
                 {template.front.includes(field.id) && <Check className="w-3 h-3 text-white" />}
               </div>
@@ -120,18 +118,16 @@ const TemplateEditor = ({ fields, template, onUpdateTemplate }) => {
             <div
               key={`back-${field.id}`}
               onClick={() => toggleField('back', field.id)}
-              className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
-                template.back.includes(field.id)
+              className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${template.back.includes(field.id)
                   ? 'bg-emerald-50 border border-emerald-200 text-emerald-900'
                   : 'bg-slate-50 border border-slate-100 text-slate-400 hover:bg-slate-100'
-              }`}
+                }`}
             >
               <div
-                className={`w-4 h-4 rounded border mr-3 flex items-center justify-center ${
-                  template.back.includes(field.id)
+                className={`w-4 h-4 rounded border mr-3 flex items-center justify-center ${template.back.includes(field.id)
                     ? 'bg-emerald-500 border-emerald-500'
                     : 'border-slate-300'
-                }`}
+                  }`}
               >
                 {template.back.includes(field.id) && <Check className="w-3 h-3 text-white" />}
               </div>
@@ -283,7 +279,8 @@ const StudySession = ({ cards, fields, template, onExit }) => {
 
   const currentCard = cards[currentIndex];
 
-  const handleGrade = () => {
+  const handleGrade = (grade: 'again' | 'hard' | 'good' | 'easy') => {
+
     // Reset AI state when moving to next card
     setAiExplanation(null);
     setIsExplaining(false);
@@ -641,11 +638,10 @@ export default function App() {
                         <button
                           key={opt}
                           onClick={() => setNewCardData({ ...newCardData, [field.id]: opt })}
-                          className={`px-5 py-2.5 rounded-lg text-sm font-medium border transition ${
-                            newCardData[field.id] === opt
+                          className={`px-5 py-2.5 rounded-lg text-sm font-medium border transition ${newCardData[field.id] === opt
                               ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                          }`}
+                            }`}
                         >
                           {opt}
                         </button>
