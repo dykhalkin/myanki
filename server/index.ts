@@ -46,13 +46,17 @@ if (process.env.NODE_ENV !== 'test') {
   // Serve static files in production
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '../dist')));
+    app.use('/myanki', express.static(path.join(__dirname, '../dist')));
 
-    // Catch-all route to serve index.html for React routing
-    app.get('*', (req, res, next) => {
+    // Catch-all middleware to serve index.html for React routing (SPA fallback)
+    app.use((req, res, next) => {
+      // Skip if it's an API call or already handled
       if (req.path.startsWith('/api')) return next();
       res.sendFile(path.join(__dirname, '../dist/index.html'));
     });
   }
+
+
 
   app.listen(port, () => {
     console.log(`Backend server running at http://localhost:${port}`);
