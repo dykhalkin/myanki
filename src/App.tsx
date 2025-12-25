@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus,
   Settings,
@@ -59,35 +59,6 @@ const INITIAL_TEMPLATE = {
   back: ['f1', 'f4', 'f2', 'f3', 'f5'],
 };
 
-const MOCK_CARDS = [
-  {
-    id: 1,
-    deckId: 'd1',
-    data: {
-      f1: 'Fernweh',
-      f2: 'Wanderlust / Longing for far-off places',
-      f3: 'Ich habe schreckliches Fernweh.',
-      f4: 'Das',
-      f5: 'Opposite of Heimweh (homesickness).',
-    },
-    status: 'new',
-    nextReview: Date.now(),
-  },
-  {
-    id: 2,
-    deckId: 'd1',
-    data: {
-      f1: 'Zeitgeist',
-      f2: 'Spirit of the times',
-      f3: 'Der Roman fängt den Zeitgeist der 20er Jahre ein.',
-      f4: 'Der',
-      f5: 'Compound: Zeit (time) + Geist (spirit)',
-    },
-    status: 'learning',
-    nextReview: Date.now(),
-  },
-];
-
 // --- COMPONENTS ---
 
 // 1. Template Editor
@@ -120,16 +91,18 @@ const TemplateEditor = ({ fields, template, onUpdateTemplate }) => {
             <div
               key={`front-${field.id}`}
               onClick={() => toggleField('front', field.id)}
-              className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${template.front.includes(field.id)
-                ? 'bg-indigo-50 border border-indigo-200 text-indigo-900'
-                : 'bg-slate-50 border border-slate-100 text-slate-400 hover:bg-slate-100'
-                }`}
+              className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                template.front.includes(field.id)
+                  ? 'bg-indigo-50 border border-indigo-200 text-indigo-900'
+                  : 'bg-slate-50 border border-slate-100 text-slate-400 hover:bg-slate-100'
+              }`}
             >
               <div
-                className={`w-4 h-4 rounded border mr-3 flex items-center justify-center ${template.front.includes(field.id)
-                  ? 'bg-indigo-500 border-indigo-500'
-                  : 'border-slate-300'
-                  }`}
+                className={`w-4 h-4 rounded border mr-3 flex items-center justify-center ${
+                  template.front.includes(field.id)
+                    ? 'bg-indigo-500 border-indigo-500'
+                    : 'border-slate-300'
+                }`}
               >
                 {template.front.includes(field.id) && <Check className="w-3 h-3 text-white" />}
               </div>
@@ -147,16 +120,18 @@ const TemplateEditor = ({ fields, template, onUpdateTemplate }) => {
             <div
               key={`back-${field.id}`}
               onClick={() => toggleField('back', field.id)}
-              className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${template.back.includes(field.id)
-                ? 'bg-emerald-50 border border-emerald-200 text-emerald-900'
-                : 'bg-slate-50 border border-slate-100 text-slate-400 hover:bg-slate-100'
-                }`}
+              className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                template.back.includes(field.id)
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-900'
+                  : 'bg-slate-50 border border-slate-100 text-slate-400 hover:bg-slate-100'
+              }`}
             >
               <div
-                className={`w-4 h-4 rounded border mr-3 flex items-center justify-center ${template.back.includes(field.id)
-                  ? 'bg-emerald-500 border-emerald-500'
-                  : 'border-slate-300'
-                  }`}
+                className={`w-4 h-4 rounded border mr-3 flex items-center justify-center ${
+                  template.back.includes(field.id)
+                    ? 'bg-emerald-500 border-emerald-500'
+                    : 'border-slate-300'
+                }`}
               >
                 {template.back.includes(field.id) && <Check className="w-3 h-3 text-white" />}
               </div>
@@ -244,6 +219,7 @@ const CardFaceContent = ({
 }) => {
   return (
     <div
+      data-testid={isBack ? 'back-face' : 'front-face'}
       className={`w-full h-full bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col overflow-hidden [backface-visibility:hidden] ${isBack ? '[transform:rotateY(180deg)]' : ''}`}
     >
       <div className="w-full h-full overflow-y-auto custom-scrollbar p-8 flex flex-col items-center justify-center">
@@ -461,25 +437,49 @@ const StudySession = ({ cards, fields, template, onExit }) => {
 // 4. Main App & Dashboard
 export default function App() {
   const [view, setView] = useState('dashboard'); // dashboard, study, editor, settings
-  const [cards, setCards] = useState<any[]>(MOCK_CARDS);
+  const [cards, setCards] = useState<any[]>([]); // Start empty, fetch on load
   const [template, setTemplate] = useState(INITIAL_TEMPLATE);
+
+  // Fetch cards from backend
+  useEffect(() => {
+    fetch('/api/cards')
+      .then((res) => res.json())
+      .then((data) => setCards(data))
+      .catch((err) => console.error('Failed to fetch cards:', err));
+  }, []);
 
   // New Card State
   const [newCardData, setNewCardData] = useState<any>({});
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleAddCard = () => {
+  const handleAddCard = async () => {
     if (!newCardData.f1) return;
-    const newCard = {
-      id: Date.now(),
-      deckId: 'd1',
-      data: newCardData,
-      status: 'new',
-      nextReview: Date.now(),
-    };
-    setCards([...cards, newCard]);
-    setNewCardData({});
-    alert('Card added successfully!');
+
+    // Optimistic UI update or wait for server? Let's wait for server for simplicity and consistency
+    try {
+      const newCardPayload = {
+        deckId: 'd1',
+        data: newCardData,
+        status: 'new',
+        nextReview: Date.now(),
+      };
+
+      const response = await fetch('/api/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCardPayload),
+      });
+
+      if (!response.ok) throw new Error('Failed to save card');
+
+      const savedCard = await response.json();
+      setCards([...cards, savedCard]);
+      setNewCardData({});
+      alert('Card added successfully!');
+    } catch (error) {
+      console.error('Error adding card:', error);
+      alert('Failed to add card.');
+    }
   };
 
   const handleAutoFill = async () => {
@@ -641,10 +641,11 @@ export default function App() {
                         <button
                           key={opt}
                           onClick={() => setNewCardData({ ...newCardData, [field.id]: opt })}
-                          className={`px-5 py-2.5 rounded-lg text-sm font-medium border transition ${newCardData[field.id] === opt
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                            }`}
+                          className={`px-5 py-2.5 rounded-lg text-sm font-medium border transition ${
+                            newCardData[field.id] === opt
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                          }`}
                         >
                           {opt}
                         </button>
@@ -712,6 +713,7 @@ export default function App() {
                     <BookOpen className="w-7 h-7" />
                   </div>
                   <button
+                    aria-label="Edit Template"
                     onClick={() => setView('settings')}
                     className="text-slate-300 hover:text-indigo-500 transition p-1 hover:bg-indigo-50 rounded-lg"
                   >
